@@ -10,8 +10,9 @@ class TestResult():
   def testFailed(self, name):
     self.failedCount += 1
     self.log.append(f"{name}: failed")
-  def setupFailed(self):
+  def setupFailed(self, name):
     self.failedCount += 1
+    self.log.append(f"{name}: setup failed")
   def summary(self):
     return f"{self.runCount} run, {self.failedCount} failed"
   def details(self):
@@ -39,7 +40,7 @@ class TestCase():
       method()
       result.testPassed(self.name)
     except SetupFailedException:
-      result.setupFailed()
+      result.setupFailed(self.name)
     except Exception:
       result.testFailed(self.name)
     self.logging("tearDown")
@@ -115,6 +116,7 @@ class TestCaseTest(TestCase):
     test = SetupFailed("testMethod")
     test.run(self.result)
     assert test.log == "setup tearDown "
+    assert self.result.details() == "testMethod: setup failed"
   def testCaseToSuite(self):
     suite = TestSuite(WasRun)
     suite.run(self.result)
