@@ -7,9 +7,9 @@ class TestResult():
     self.runCount += 1
   def testPassed(self, name):
     self.log.append(f"{name}: passed")
-  def testFailed(self, name):
+  def testFailed(self, name, message):
     self.failedCount += 1
-    self.log.append(f"{name}: failed")
+    self.log.append(f"{name}: failed, error: {message}")
   def setupFailed(self, name):
     self.failedCount += 1
     self.log.append(f"{name}: setup failed")
@@ -41,8 +41,8 @@ class TestCase():
       result.testPassed(self.name)
     except SetupFailedException:
       result.setupFailed(self.name)
-    except Exception:
-      result.testFailed(self.name)
+    except Exception as e:
+      result.testFailed(self.name, e)
     self.logging("tearDown")
     self.tearDown()
 
@@ -67,6 +67,17 @@ class SetupFailed(TestCase):
   def tearDown(self):
     pass
 
+class AssertionException(Exception):
+  def __init__(self, got, want):
+    self.got = got
+    self.want = want
+  def __str__(self):
+    return repr(f"got: {self.got}, want: {self.want}")
+
+def myAssert(got, want):
+  if got != want:
+    raise AssertionException(got, want)
+
 class TestSuite():
   def __init__(self, testCaseClass = None):
     self.tests = []
@@ -89,42 +100,52 @@ class TestCaseTest(TestCase):
   def testTemplateMethod(self):
     test = WasRun("testMethod")
     test.run(self.result)
-    assert test.log == "setup testMethod tearDown "
+    myAssert(test.log, "setup testMethod tearDown ")
   def testResult(self):
     test = WasRun("testMethod")
     test.run(self.result)
-    assert self.result.summary() == "1 run, 0 failed"
+    myAssert(self.result.summary(), "1 run, 0 failed")
   def testFailedResult(self):
     test = WasRun("testBrokenMethod")
     test.run(self.result)
-    assert self.result.summary() == "1 run, 1 failed"
+    myAssert(self.result.summary(), "1 run, 1 failed")
   def testFailedResultFormating(self):
     self.result.testStarted()
-    self.result.testFailed("testMethod")
-    assert self.result.summary() == "1 run, 1 failed"
+    self.result.testFailed("testMethod", "failed message")
+    myAssert(self.result.summary(), "1 run, 1 failed")
   def testSuite(self):
     suite = TestSuite()
     suite.add(WasRun("testMethod"))
     suite.add(WasRun("testBrokenMethod"))
     suite.run(self.result)
-    assert self.result.summary() == "2 run, 1 failed"
+    myAssert(self.result.summary(), "2 run, 1 failed")
   def testTearDownEvenFailed(self):
     test = WasRun("testBrokenMethod")
     test.run(self.result)
-    assert test.log == "setup testBrokenMethod tearDown "
+    myAssert(test.log, "setup testBrokenMethod tearDown ")
   def testSetupFailed(self):
     test = SetupFailed("testMethod")
     test.run(self.result)
-    assert test.log == "setup tearDown "
-    assert self.result.details() == "testMethod: setup failed"
+    myAssert(test.log, "setup tearDown ")
+    myAssert(self.result.details(), "testMethod: setup failed")
   def testCaseToSuite(self):
     suite = TestSuite(WasRun)
     suite.run(self.result)
-    assert self.result.summary() == "2 run, 1 failed"
+    myAssert(self.result.summary(), "2 run, 1 failed")
   def testResultDetails(self):
     suite = TestSuite(WasRun)
     suite.run(self.result)
-    assert self.result.details() == "testBrokenMethod: failed\ntestMethod: passed"
+    myAssert(self.result.details(), "testBrokenMethod: failed, error: \ntestMethod: passed")
+  def testMyAssertion(self):
+    myAssert(1, 1)
+    myAssert(None, None)
+    myAssert("a", "a")
+    try:
+      myAssert(1, 2)
+    except AssertionException as e:
+      myAssert(e.got, 1)
+      myAssert(e.want, 2)
+    
   
 suite = TestSuite(TestCaseTest)
 result = TestResult()
