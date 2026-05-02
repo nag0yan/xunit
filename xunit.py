@@ -14,7 +14,7 @@ class TestResult():
     self.failedCount += 1
     self.log.append(f"{name}: setup failed")
   def summary(self):
-    return f"{self.runCount} run, {self.failedCount} failed"
+    return f"{self.runCount} run, {self.runCount-self.failedCount} passed, {self.failedCount} failed"
   def details(self):
     return "\n".join(sorted(self.log))
 
@@ -104,21 +104,21 @@ class TestCaseTest(TestCase):
   def testResult(self):
     test = WasRun("testMethod")
     test.run(self.result)
-    myAssert(self.result.summary(), "1 run, 0 failed")
+    myAssert(self.result.summary(), "1 run, 1 passed, 0 failed")
   def testFailedResult(self):
     test = WasRun("testBrokenMethod")
     test.run(self.result)
-    myAssert(self.result.summary(), "1 run, 1 failed")
+    myAssert(self.result.summary(), "1 run, 0 passed, 1 failed")
   def testFailedResultFormating(self):
     self.result.testStarted()
     self.result.testFailed("testMethod", "failed message")
-    myAssert(self.result.summary(), "1 run, 1 failed")
+    myAssert(self.result.summary(), "1 run, 0 passed, 1 failed")
   def testSuite(self):
     suite = TestSuite()
     suite.add(WasRun("testMethod"))
     suite.add(WasRun("testBrokenMethod"))
     suite.run(self.result)
-    myAssert(self.result.summary(), "2 run, 1 failed")
+    myAssert(self.result.summary(), "2 run, 1 passed, 1 failed")
   def testTearDownEvenFailed(self):
     test = WasRun("testBrokenMethod")
     test.run(self.result)
@@ -131,7 +131,7 @@ class TestCaseTest(TestCase):
   def testCaseToSuite(self):
     suite = TestSuite(WasRun)
     suite.run(self.result)
-    myAssert(self.result.summary(), "2 run, 1 failed")
+    myAssert(self.result.summary(), "2 run, 1 passed, 1 failed")
   def testResultDetails(self):
     suite = TestSuite(WasRun)
     suite.run(self.result)
